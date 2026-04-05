@@ -910,7 +910,7 @@ function renderTeamOverview() {
         if (!tasks.length) return;
         const sec = document.createElement('div'); sec.className = 'staff-sec-label';
         sec.textContent = label; detail.appendChild(sec);
-    0   const sorted = tasks.filter(function(t){return t.status!=='completed';})
+        const sorted = tasks.filter(function(t){return t.status!=='completed';})
           .concat(tasks.filter(function(t){return t.status==='completed';}));
         sorted.forEach(function(t) {
           const r = document.createElement('div');
