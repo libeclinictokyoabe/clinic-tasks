@@ -134,7 +134,7 @@
   .sub-item-add button{border:none;background:var(--primary-light);color:var(--primary);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
   .sub-item-add button:hover{background:var(--primary);color:#fff;}
 
-  /* ① チームタスク概要 */
+  /* ① テームタスク概要 */
   .team-card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
   .team-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #F5F5F5;}
   .team-row:last-child{border-bottom:none;}
@@ -297,7 +297,7 @@
     </div>
     <div id="roleRoutineList" class="sec-content"></div>
 
-    <!-- Block 4: チームf��要 -->
+    <!-- Block 4: チーム概要 -->
     <div class="section-title" onclick="toggleSection('team')">
       <span class="sec-chevron" id="chevron-team">▼</span>
       👥 チームのタスク状況
@@ -407,7 +407,7 @@
       <input type="text" id="projectLeader" placeholder="リーダー名">
     </div>
     <div class="field">
-      <label>🎯 目標・目的（なぜ行うか）</label>
+      <label>🎯 目標・目的（なぜ行うに）</label>
       <textarea id="projectGoal" rows="2" placeholder="例：患者満足度向上のため、〇〇を改善する"></textarea>
     </div>
     <div style="display:flex;gap:10px">
@@ -707,7 +707,7 @@ function renderAssigneeTags() {
 }
 function addAssigneeTag() {
   const inp = document.getElementById('assigneeInput'); if(!inp) return;
-  // IME変換丮は無視（日本語入力のEnter二重発火防止）
+  // IME変換中は無視（日本語入力のEnter二重発火防止）
   if (inp._composing) return;
   const name = inp.value.trim();
   inp.value = '';
@@ -952,7 +952,7 @@ function renderTeamOverview() {
 function renderMyTasksBanner() {
   const el = document.getElementById('myTasksBanner');
   if (!userName || !userRole) {
-    el.innerHTML = '<div class="prompt-banner">⚠️ '+(userName?'':'名前と')+(userRole?'':'職種を')+'設定してください — タスクの絞り込みと職種別ルーティンを表示する�めに必要です<button onclick="openSettings()">設定を開く</button></div>';
+    el.innerHTML = '<div class="prompt-banner">⚠️ '+(userName?'':'名前と')+(userRole?'':'職種を')+'設定してください — タスクの絞り込みと職種別ルーティンを表示するために必要です<button onclick="openSettings()">設定を開く</button></div>';
   } else {
     el.innerHTML = '';
   }
@@ -1541,7 +1541,7 @@ function renderGoalsTab() {
     return;
   }
 
-  // 未着手・進行中を上に、完了を下に（ユーザーが並び替え可能）
+  // 未着手・進行$��を上に、完了を下に（ユーザーが並び替え可能）
   const active = (data.goals||[]).filter(function(g){ return g.status!=='achieved'; });
   const achieved= (data.goals||[]).filter(function(g){ return g.status==='achieved'; });
 
@@ -1622,7 +1622,7 @@ function buildGoalCard(g) {
     '<button class="icon-btn" onclick="openEditGoal(\''+g.id+'\')" title="編集">✏️</button>';
   card.appendChild(hdr);
 
-  // 進行中・完了のときプログレスバー表示
+  // 進行中・完了なときプログレスバー表示
   if (isProgress || isAchieved) {
     const pw=document.createElement('div'); pw.className='goal-progress-wrap';
     pw.innerHTML=
@@ -1731,131 +1731,114 @@ function openEditMyTask(id) {
   document.getElementById('routineRoleField').style.display='none';
   document.getElementById('routineTodayStaffField').style.display='none';
   document.getElementById('taskDueField').style.display='';
-  setAssignees(getAssigneesFromItem(t));
-  document.getElementById('taskModal').classList.add('open');
-  setTimeout(clearAssigneeInput, 50);
+  setAssignotes=document.getElementById('taskNotes').value.trim();
+
+  if (type==='shared') {
+    const dueDate=document.getElementById('taskDue').value;
+    const id=document.getElementById('taskId').value;
+    if (id) {
+      const t=(data.sharedTasks||[]).find(function(x){ return x.id===id; });
+      if(t){ t.name=name; t.assignees=assignees; t.assignee=''; t.priority=priority; t.dueDate=dueDate; t.notes=notes; }
+    } else {
+      if(!data.sharedTasks) data.sharedTasks=[];
+      data.sharedTasks.push({id:uid(),name:name,assignees:assignees,priority:priority,dueDate:dueDate,notes:notes,status:'pending',createdAt:new Date().toISOString()});
+    }
+  } else if (type==='subtask') {
+    const projId=document.getElementById('taskProjectId').value;
+    const stId=document.getElementById('taskSubtaskId').value;
+    const dueDate=document.getElementById('taskDue').value;
+    const proj=(data.projects||[]).find(function(p){ return p.id===projId; }); if(!proj) return;
+    if(!proj.subtasks) proj.subtasks=[];
+    if(stId){ const st=proj.subtasks.find(function(s){return s.id===stId;}); if(st){st.name=name;st.assignees=assignees;st.assignee='';st.priority=priority;st.dueDate=dueDate;st.notes=notes;} }
+    else proj.subtasks.push({id:uid(),name:name,assignees:assignees,priority:priority,dueDate:dueDate,notes:notes,status:'pending',createdAt:new Date().toISOString()});
+  } else if (type==='generalRoutine') {
+    const freq=document.getElementById('taskFrequency').value;
+    const todayStaff=document.getElementById('taskTodayStaff').value.trim();
+    const id=document.getElementById('taskId').value;
+    if(!data.generalRoutines) data.generalRoutines=[];
+    if(id){ const r=data.generalRoutines.find(function(x){return x.id===id;}); if(r){r.name=name;r.priority=priority;r.notes=notes;r.frequency=freq;r.todayStaff=todayStaff;} }
+    else data.generalRoutines.push({id:uid(),name:name,frequency:freq,priority:priority,notes:notes,status:'pending',todayStaff:todayStaff,lastReset:new Date().toISOString(),createdAt:new Date().toISOString()});
+  } else if (type==='roleRoutine') {
+    const freq=document.getElementById('taskFrequency').value;
+    const role=document.getElementById('taskRole').value;
+    const todayStaff=document.getElementById('taskTodayStaff').value.trim();
+    const id=document.getElementById('taskId').value;
+    if(!data.roleRoutines) data.roleRoutines=[];
+    if(id){ const r=data.roleRoutines.find(function(x){return x.id===id;}); if(r){r.name=name;r.priority=priority;r.notes=notes;r.frequency=freq;r.role=role;r.todayStaff=todayStaff;} }
+    else data.roleRoutines.push({id:uid(),name:name,role:role,frequency:freq,priority:priority,notes:notes,status:'pending',lastReset:new Date().toISOString(),createdAt:new Date().toISOString()});
+  }
+  saveLocal(); pushFirebase(); closeModal('taskModal'); renderAll();
+}
+
+function deleteTask() {
+  const type=document.getElementById('taskType').value;
+  const id=document.getElementById('taskId').value;
+  if (type==='shared') data.sharedTasks=(data.sharedTasks||[]).filter(function(x){return x.id!==id;});
+  else if(type==='generalRoutine') data.generalRoutines=(data.generalRoutines||[]).filter(function(x){return x.id!==id;});
+  else if(type==='roleRoutine') data.roleRoutines=(data.roleRoutines||[]).filter(function(x){return x.id!==id;});
+  else if(type==='subtask'){
+    const projId=document.getElementById('taskProjectId').value;
+    const stId=document.getElementById('taskSubtaskId').value;
+    const proj=(data.projects||[]).find(function(p){return p.id===projId;});
+    if(proj) proj.subtasks=(proj.subtasks||[]).filter(function(s){return s.id!==stId;});
+  }
+  saveLocal(); pushFirebase(); closeModal('taskModal'); renderAll();
 }
 
 /* ════════════════════════════════════════════
-   TASK MODAL — subtask (project)
+   PROJECT MODAL
 ════════════════════════════════════════════ */
-function openEditSubtask(projectId, subtaskId) {
-  const proj=(data.projects||[]).find(function(p){ return p.id===projectId; }); if(!proj) return;
-  const st=(proj.subtasks||[]).find(function(s){ return s.id===subtaskId; }); if(!st) return;
-  document.getElementById('taskModalTitle').textContent='タスクを編集（'+proj.name+'）';
+function openAddProject() {
+  document.getElementById('projectModalTitle').textContent='プロジェクトを追加';
+  ['projectId','projectName','projectLeader','projectGoal','projectNotes'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('projectPriority').value='';
+  document.getElementById('projectDue').value='';
+  document.getElementById('projectDeleteRow').style.display='none';
+  document.getElementById('projectModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('projectName').focus(); },100);
+}
+function openEditProject(id) {
+  const proj=(data.projects||[]).find(function(p){return p.id===id;}); if(!proj) return;
+  document.getElementById('projectModalTitle').textContent='プロジェクトを編集';
+  document.getElementById('projectId').value=proj.id;
+  document.getElementById('projectName').value=proj.name||'';
+  document.getElementById('projectLeader').value=proj.leader||'';
+  document.getElementById('projectGoal').value=proj.goal||'';
+  document.getElementById('projectPriority').value=proj.priority||'';
+  document.getElementById('projectDue').value=proj.dueDate||'';
+  document.getElementById('projectNotes').value=proj.notes||'';
+  document.getElementById('projectDeleteRow').style.display='';
+  document.getElementById('projectModal').classList.add('open');
+}
+function saveProject() {
+  const name=document.getElementById('projectName').value.trim(); if(!name){ document.getElementById('projectName').focus(); return; }
+  const id=document.getElementById('projectId').value;
+  const obj={name:name,leader:document.getElementById('projectLeader').value.trim(),goal:document.getElementById('projectGoal').value.trim(),priority:document.getElementById('projectPriority').value,dueDate:document.getElementById('projectDue').value,notes:document.getElementById('projectNotes').value.trim()};
+  if(id){ const proj=(data.projects||[]).find(function(p){return p.id===id;}); if(proj) Object.assign(proj,obj); }
+  else { if(!data.projects) data.projects=[]; data.projects.push(Object.assign({id:uid(),subtasks:[],createdAt:new Date().toISOString()},obj)); }
+  saveLocal(); pushFirebase(); closeModal('projectModal'); renderAll();
+}
+function deleteProject() {
+  const id=document.getElementById('projectId').value;
+  if(!confirm('このプロジェクトと全タスクを削除しますか？')) return;
+  data.projects=(data.projects||[]).filter(function(p){return p.id!==id;});
+  expandedProjects.delete(id); saveLocal(); pushFirebase(); closeModal('projectModal'); renderAll();
+}
+
+/* ════════════════════════════════════════════
+   ADD SUBTASK — モーダルで詳細入力
+════════════════════════════════════════════ */
+function openAddSubtask(projectId) {
+  const proj=(data.projects||[]).find(function(p){return p.id===projectId;}); if(!proj) return;
+  document.getElementById('taskModalTitle').textContent='タスクを追加（'+proj.name+'）';
   document.getElementById('taskId').value='';
   document.getElementById('taskType').value='subtask';
   document.getElementById('taskProjectId').value=projectId;
-  document.getElementById('taskSubtaskId').value=subtaskId;
-  document.getElementById('taskName').value=st.name||'';
-  document.getElementById('taskPriority').value=st.priority||'';
-  document.getElementById('taskDue').value=st.dueDate||'';
-  document.getElementById('taskNotes').value=st.notes||'';
-  document.getElementById('taskDeleteRow').style.display='';
-  document.getElementById('assigneeField').style.display='';
-  document.getElementById('routineFreqField').style.display='none';
-  document.getElementById('routineRoleField').style.display='none';
-  document.getElementById('routineTodayStaffField').style.display='none';
-  document.getElementById('taskDueField').style.display='';
-  setAssignees(getAssigneesFromItem(st));
-  document.getElementById('taskModal').classList.add('open');
-  setTimeout(clearAssigneeInput, 50);
-}
-
-/* ════════════════════════════════════════════
-   TASK MODAL — general routine
-════════════════════════════════════════════ */
-function openAddGeneralRoutine() {
-  document.getElementById('taskModalTitle').textContent='共有ルーティンを追加';
-  document.getElementById('taskId').value='';
-  document.getElementById('taskType').value='generalRoutine';
+  document.getElementById('taskSubtaskId').value='';
   document.getElementById('taskName').value='';
   document.getElementById('taskPriority').value='';
-  document.getElementById('taskNotes').value='';
-  document.getElementById('taskFrequency').value='daily';
-  document.getElementById('taskTodayStaff').value='';
-  document.getElementById('taskDeleteRow').style.display='none';
-  document.getElementById('assigneeField').style.display='none';
-  document.getElementById('routineFreqField').style.display='';
-  document.getElementById('routineRoleField').style.display='none';
-  document.getElementById('routineTodayStaffField').style.display='';
-  document.getElementById('taskDueField').style.display='none';
-  document.getElementById('taskModal').classList.add('open');
-  setTimeout(function(){ document.getElementById('taskName').focus(); },100);
-}
-function openEditGeneralRoutine(id) {
-  const r=(data.generalRoutines||[]).find(function(x){ return x.id===id; }); if(!r) return;
-  document.getElementById('taskModalTitle').textContent='共有ルーティンを編集';
-  document.getElementById('taskId').value=r.id;
-  document.getElementById('taskType').value='generalRoutine';
-  document.getElementById('taskName').value=r.name||'';
-  document.getElementById('taskPriority').value=r.priority||'';
-  document.getElementById('taskNotes').value=r.notes||'';
-  document.getElementById('taskFrequency').value=r.frequency||'daily';
-  document.getElementById('taskTodayStaff').value=r.todayStaff||'';
-  document.getElementById('taskDeleteRow').style.display='';
-  document.getElementById('assigneeField').style.display='none';
-  document.getElementById('routineFreqField').style.display='';
-  document.getElementById('routineRoleField').style.display='none';
-  document.getElementById('routineTodayStaffField').style.display='';
-  document.getElementById('taskDueField').style.display='none';
-  document.getElementById('taskModal').classList.add('open');
-}
-
-/* ════════════════════════════════════════════
-   TASK MODAL — role routine
-════════════════════════════════════════════ */
-function openAddRoleRoutine() {
-  document.getElementById('taskModalTitle').textContent='職種別ルーティンを追加';
-  document.getElementById('taskId').value='';
-  document.getElementById('taskType').value='roleRoutine';
-  document.getElementById('taskName').value='';
-  document.getElementById('taskPriority').value='';
-  document.getElementById('taskNotes').value='';
-  document.getElementById('taskFrequency').value='daily';
-  document.getElementById('taskRole').value=userRole||'';
-  document.getElementById('taskTodayStaff').value='';
-  document.getElementById('taskDeleteRow').style.display='none';
-  document.getElementById('assigneeField').style.display='none';
-  document.getElementById('routineFreqField').style.display='';
-  document.getElementById('routineRoleField').style.display='';
-  document.getElementById('routineTodayStaffField').style.display='';
-  document.getElementById('taskDueField').style.display='none';
-  document.getElementById('taskModal').classList.add('open');
-  setTimeout(function(){ document.getElementById('taskName').focus(); },100);
-}
-function openEditRoleRoutine(id) {
-  const r=(data.roleRoutines||[]).find(function(x){ return x.id===id; }); if(!r) return;
-  document.getElementById('taskModalTitle').textContent='職種別ルーティンを編集';
-  document.getElementById('taskId').value=r.id;
-  document.getElementById('taskType').value='roleRoutine';
-  document.getElementById('taskName').value=r.name||'';
-  document.getElementById('taskPriority').value=r.priority||'';
-  document.getElementById('taskNotes').value=r.notes||'';
-  document.getElementById('taskFrequency').value=r.frequency||'daily';
-  document.getElementById('taskRole').value=r.role||'';
-  document.getElementById('taskTodayStaff').value=r.todayStaff||'';
-  document.getElementById('taskDeleteRow').style.display='';
-  document.getElementById('assigneeField').style.display='none';
-  document.getElementById('routineFreqField').style.display='';
-  document.getElementById('routineRoleField').style.display='';
-  document.getElementById('routineTodayStaffField').style.display='';
-  document.getElementById('taskDueField').style.display='none';
-  document.getElementById('taskModal').classList.add('open');
-}
-
-/* ════════════════════════════════════════════
-   SAVE / DELETE TASK
-════════════════════════════════════════════ */
-function saveTask() {
-  const type=document.getElementById('taskType').value;
-  const name=document.getElementById('taskName').value.trim();
-  if (!name){ document.getElementById('taskName').focus(); return; }
-  const pendingInp=document.getElementById('assigneeInput');
-  if (pendingInp && pendingInp.value.trim()) addAssigneeTag();
-  const assignees=currentAssignees.slice();
-  const priority=document.getElementById('taskPriority').value;
-  const notes=document.getElementById('taskNotes').value.trim();
+  document.getElementById('taskDue').value='';
+  document.getEotes=document.getElementById('taskNotes').value.trim();
 
   if (type==='shared') {
     const dueDate=document.getElementById('taskDue').value;
